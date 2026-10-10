@@ -1,5 +1,10 @@
 # pyg-lib
 
+> [!NOTE]
+> **Work in progress: Metal GPU Backend**
+>
+> I’m adding a Metal GPU backend to `pyg-lib` for PyTorch’s MPS device on macOS.
+
 <div align="center">
 
 [![Docs Status][docs-image]][docs-url]
