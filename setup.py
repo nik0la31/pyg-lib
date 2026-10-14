@@ -41,6 +41,15 @@ class CMakeBuild(build_ext):
         ext_filename_parts = ext_filename_parts[:-2] + ext_filename_parts[-1:]
         return '.'.join(ext_filename_parts)
 
+    def get_outputs(self):
+        outputs = super().get_outputs()
+        for ext in self.extensions:
+            extdir = osp.dirname(self.get_ext_fullpath(ext.name))
+            metallib = osp.join(extdir, 'pyg.metallib')
+            if osp.exists(metallib):
+                outputs.append(metallib)
+        return outputs
+
     def build_extension(self, ext):
         import sysconfig
 
@@ -59,11 +68,14 @@ class CMakeBuild(build_ext):
 
         WITH_CUDA = torch.cuda.is_available()
         WITH_CUDA = bool(int(os.getenv('FORCE_CUDA', WITH_CUDA)))
+        WITH_METAL = torch.backends.mps.is_available()
+        WITH_METAL = bool(int(os.getenv('FORCE_METAL', WITH_METAL)))
 
         cmake_args = [
             '-DBUILD_TEST=OFF',
             '-DBUILD_BENCHMARK=OFF',
             f'-DWITH_CUDA={"ON" if WITH_CUDA else "OFF"}',
+            f'-DWITH_METAL={"ON" if WITH_METAL else "OFF"}',
             # Disable cmake's default CUDA architectures; torch's cmake
             # handles gencode flags via TORCH_CUDA_ARCH_LIST instead.
             *(['-DCMAKE_CUDA_ARCHITECTURES=OFF'] if WITH_CUDA else []),
