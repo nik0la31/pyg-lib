@@ -22,6 +22,7 @@ option(BUILD_TEST "Enable testing" OFF)
 option(BUILD_BENCHMARK "Enable benchmarks" OFF)
 option(WITH_COV "Enable code coverage" OFF)
 option(WITH_CUDA "Enable CUDA support" OFF)
+option(WITH_METAL "Enable Metal support" OFF)
 
 if(NOT WIN32 AND NOT DEFINED USE_CXX11_ABI)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
@@ -100,6 +101,60 @@ endif()
 add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE Py_LIMITED_API=0x030A0000)
+
+if(WITH_METAL)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_METAL)
+
+  find_library(FOUNDATION_FRAMEWORK Foundation REQUIRED)
+  find_library(METAL_FRAMEWORK Metal REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${FOUNDATION_FRAMEWORK}
+    ${METAL_FRAMEWORK}
+  )
+
+  file(GLOB_RECURSE METAL_SOURCES CONFIGURE_DEPENDS ${CSRC}/*.metal)
+  if(METAL_SOURCES)
+    find_program(XCRUN_EXECUTABLE xcrun REQUIRED)
+    set(METAL_AIR_FILES)
+
+    foreach(METAL_SOURCE IN LISTS METAL_SOURCES)
+      get_filename_component(METAL_NAME ${METAL_SOURCE} NAME_WE)
+      string(MD5 METAL_SOURCE_HASH ${METAL_SOURCE})
+      set(METAL_AIR_FILE
+        "${CMAKE_CURRENT_BINARY_DIR}/metal/${METAL_NAME}_${METAL_SOURCE_HASH}.air")
+
+      add_custom_command(
+        OUTPUT ${METAL_AIR_FILE}
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+                "${CMAKE_CURRENT_BINARY_DIR}/metal"
+        COMMAND ${XCRUN_EXECUTABLE} -sdk macosx metal -c
+                ${METAL_SOURCE} -o ${METAL_AIR_FILE}
+        DEPENDS ${METAL_SOURCE}
+        VERBATIM
+      )
+      list(APPEND METAL_AIR_FILES ${METAL_AIR_FILE})
+    endforeach()
+
+    set(METAL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/pyg.metallib")
+    add_custom_command(
+      OUTPUT ${METAL_LIBRARY}
+      COMMAND ${XCRUN_EXECUTABLE} -sdk macosx metallib
+              ${METAL_AIR_FILES} -o ${METAL_LIBRARY}
+      DEPENDS ${METAL_AIR_FILES}
+      COMMAND_EXPAND_LISTS
+      VERBATIM
+    )
+    add_custom_target(pyg_metal_shaders DEPENDS ${METAL_LIBRARY})
+    add_dependencies(${PROJECT_NAME} pyg_metal_shaders)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              ${METAL_LIBRARY}
+              "$<TARGET_FILE_DIR:${PROJECT_NAME}>/pyg.metallib"
+      VERBATIM
+    )
+  endif()
+endif()
+
 if(MKL_INCLUDE_FOUND)
     target_include_directories(${PROJECT_NAME} PRIVATE ${BLAS_INCLUDE_DIR})
 endif()
