@@ -33,7 +33,7 @@ kernel void sampled_op_kernel(SAMPLED_OP_ARGUMENTS(T)) {
     T a = left[i * num_feats + k];
     T b = right[j * num_feats + k];
 
-    T c;
+    T c = T(0);
 
     if (fn_type == 0) {
         c = a + b;
@@ -64,5 +64,3 @@ INSTANTIATE_SAMPLED_OP(uchar, uchar)
 
 #undef INSTANTIATE_SAMPLED_OP
 #undef SAMPLED_OP_ARGUMENTS
-
-}
