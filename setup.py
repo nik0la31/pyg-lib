@@ -50,6 +50,18 @@ class CMakeBuild(build_ext):
                 outputs.append(metallib)
         return outputs
 
+    def copy_extensions_to_source(self):
+        super().copy_extensions_to_source()
+        build_py = self.get_finalized_command('build_py')
+        for ext in self.extensions:
+            package = ext.name.rpartition('.')[0]
+            source_dir = build_py.get_package_dir(package)
+            ext_path = self.get_ext_filename(ext.name)
+            build_dir = osp.join(self.build_lib, osp.dirname(ext_path))
+            metallib = osp.join(build_dir, 'pyg.metallib')
+            if osp.exists(metallib):
+                self.copy_file(metallib, osp.join(source_dir, 'pyg.metallib'))
+
     def build_extension(self, ext):
         import sysconfig
 

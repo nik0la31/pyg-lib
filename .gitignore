@@ -17,3 +17,4 @@ alpha/
 *.pt
 *.csv
 pyg_lib/csrc/config.h
+pyg_lib/pyg.metallib
