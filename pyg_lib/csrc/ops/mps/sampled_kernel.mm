@@ -51,7 +51,7 @@ at::Tensor sampled_op_mps(const at::Tensor& left,
                           const at::Tensor& right,
                           const at::optional<at::Tensor> left_index,
                           const at::optional<at::Tensor> right_index,
-                          const std::string& fn) {
+                          const std::string fn) {
   auto dim_size = left.size(0);
   if (left_index.has_value() && !right_index.has_value()) {
     dim_size = right.size(0);
