@@ -41,10 +41,10 @@ at::native::mps::PrecompiledMetalShaderLibrary& getPygMetalLibrary() {
   return library;
 }
 
-MTLComputePipelineState_t getSampledOpPipeline() {
-  static MTLComputePipelineState_t pipeline =
-      getPygMetalLibrary().getPipelineStateForFunc("sampled_op_kernel");
-  return pipeline;
+MTLComputePipelineState_t getSampledOpPipeline(c10::ScalarType scalar_type) {
+  const auto function_name =
+      "sampled_op_" + at::native::mps::scalarToMetalTypeString(scalar_type);
+  return getPygMetalLibrary().getPipelineStateForFunc(function_name);
 }
 
 at::Tensor sampled_op_mps(const at::Tensor& left,
@@ -65,18 +65,19 @@ at::Tensor sampled_op_mps(const at::Tensor& left,
   auto stream = at::mps::getCurrentMPSStream();
   const auto fn_type = static_cast<uint32_t>(to_fn_type.at(fn));
 
-  getSampledOpPipeline();
-
   AT_DISPATCH_MPS_TYPES(left.scalar_type(), "sampled_op_mps", [&]() {
-    TORCH_CHECK(false, "pyg::sampled_op MPS kernel is not implemented yet");
-
-    auto encoder = stream->commandEncoder();
-    at::native::mps::mtl_setArgs<0>(encoder,
-      left, right, out, left_index, right_index,
-      fn_type, left_index.has_value(), right_index.has_value(),
-      num_feats, numel);
-
-      // TODO: Encode the compute command for the sampled operation here
+    const auto pipeline = getSampledOpPipeline(left.scalar_type());
+    at::mps::dispatch_sync_with_rethrow(stream->queue(), ^() {
+      @autoreleasepool {
+        auto encoder = stream->commandEncoder();
+        [encoder setComputePipelineState:pipeline];
+        at::native::mps::mtl_setArgs<0>(
+            encoder, left, right, out, left_index, right_index, fn_type,
+            left_index.has_value(), right_index.has_value(), num_feats, numel);
+        at::native::mps::mtl_dispatch1DJob(
+            encoder, pipeline, static_cast<NSUInteger>(numel));
+      }
+    });
   });
 
   return out;
