@@ -59,6 +59,18 @@ def withMPS(func: Callable) -> Callable:
     return pytest.mark.parametrize('device', devices)(func)
 
 
+def withDevice(func: Callable) -> Callable:
+    import pytest
+
+    devices = [pytest.param(torch.device('cpu'), id='cpu')]
+    if torch.cuda.is_available():
+        devices.append(pytest.param(torch.device('cuda:0'), id='cuda:0'))
+    if torch.backends.mps.is_available():
+        devices.append(pytest.param(torch.device('mps'), id='mps'))
+
+    return pytest.mark.parametrize('device', devices)(func)
+
+
 def withDataset(group: str, name: str) -> Callable:
     def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):

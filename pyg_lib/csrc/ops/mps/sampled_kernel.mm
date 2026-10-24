@@ -1,13 +1,12 @@
 #include <ATen/ATen.h>
 #include <ATen/mps/MPSStream.h>
-#include <ATen/native/mps/MetalShaderLibrary.h>
 #include <ATen/native/mps/OperationUtils.h>
 #include <ATen/native/mps/TensorFactory.h>
 #include <torch/library.h>
 
-#include <dlfcn.h>
+#include "utils.h"
+
 #include <cstdint>
-#include <filesystem>
 #include <map>
 #include <string>
 
@@ -24,34 +23,13 @@ const std::map<std::string, FnType> to_fn_type = {
   {"div", DIV},
 };
 
-std::string getPygMetalLibraryPath() {
-  static const int module_anchor = 0;
-  Dl_info image_info{};
-  TORCH_CHECK(dladdr(&module_anchor, &image_info) != 0 && image_info.dli_fname,
-              "Unable to locate the pyg-lib extension image");
-
-  return (std::filesystem::path(image_info.dli_fname).parent_path() /
-          "pyg.metallib")
-      .string();
-}
-
-at::native::mps::PrecompiledMetalShaderLibrary& getPygMetalLibrary() {
-  static at::native::mps::PrecompiledMetalShaderLibrary library(
-      getPygMetalLibraryPath());
-  return library;
-}
-
-MTLComputePipelineState_t getSampledOpPipeline(c10::ScalarType scalar_type) {
-  const auto function_name =
-      "sampled_op_" + at::native::mps::scalarToMetalTypeString(scalar_type);
-  return getPygMetalLibrary().getPipelineStateForFunc(function_name);
-}
-
 at::Tensor sampled_op_mps(const at::Tensor& left,
                           const at::Tensor& right,
                           const at::optional<at::Tensor> left_index,
                           const at::optional<at::Tensor> right_index,
                           const std::string fn) {
+  const auto tname = at::native::mps::scalarToMetalTypeString(left);
+
   auto dim_size = left.size(0);
   if (left_index.has_value() && !right_index.has_value()) {
     dim_size = right.size(0);
@@ -66,7 +44,9 @@ at::Tensor sampled_op_mps(const at::Tensor& left,
   const auto fn_type = static_cast<uint32_t>(to_fn_type.at(fn));
 
   AT_DISPATCH_MPS_TYPES(left.scalar_type(), "sampled_op_mps", [&]() {
-    const auto pipeline = getSampledOpPipeline(left.scalar_type());
+    auto& lib = getPygMetalLibrary();
+    const auto pipeline = lib.getPipelineStateForFunc("sampled_op_" + tname);
+    
     at::mps::dispatch_sync_with_rethrow(stream->queue(), ^() {
       @autoreleasepool {
         auto encoder = stream->commandEncoder();
