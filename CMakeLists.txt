@@ -95,6 +95,14 @@ endif()
 
 set(CSRC pyg_lib/csrc)
 file(GLOB_RECURSE ALL_SOURCES ${CSRC}/*.cpp)
+if(WITH_METAL)
+  add_definitions(-DWITH_METAL)
+  enable_language(OBJCXX)
+  set(CMAKE_OBJCXX_STANDARD 20)
+  set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+  file(GLOB_RECURSE MPS_SOURCES CONFIGURE_DEPENDS ${CSRC}/ops/mps/*.mm)
+  list(APPEND ALL_SOURCES ${MPS_SOURCES})
+endif()
 if (WITH_CUDA)
   file(GLOB_RECURSE ALL_SOURCES ${ALL_SOURCES} ${CSRC}/*.cu)
 endif()
@@ -103,8 +111,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_definitions(${PROJECT_NAME} PRIVATE Py_LIMITED_API=0x030A0000)
 
 if(WITH_METAL)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE WITH_METAL)
-
   find_library(FOUNDATION_FRAMEWORK Foundation REQUIRED)
   find_library(METAL_FRAMEWORK Metal REQUIRED)
   target_link_libraries(${PROJECT_NAME} PRIVATE
