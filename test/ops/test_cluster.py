@@ -2,12 +2,17 @@ import pytest
 import torch
 
 import pyg_lib
-from pyg_lib.testing import withCUDA
+from pyg_lib.testing import withDevice
+
+def skip_unsupported_dtype(dtype: torch.dtype, device: torch.device) -> None:
+    if device.type == 'mps' and dtype == torch.double:
+        pytest.skip('MPS does not support float64')
 
 
-@withCUDA
+@withDevice
 @pytest.mark.parametrize('dtype', [torch.float, torch.double, torch.bfloat16])
 def test_grid_cluster_2d(dtype: torch.dtype, device: torch.device) -> None:
+    skip_unsupported_dtype(dtype, device)
     pos = torch.tensor(
         [[0.0, 0.0], [0.1, 0.1], [0.5, 0.5], [1.0, 1.0], [1.1, 1.1]],
         dtype=dtype,
@@ -25,9 +30,10 @@ def test_grid_cluster_2d(dtype: torch.dtype, device: torch.device) -> None:
     assert out[3] == out[4]
 
 
-@withCUDA
+@withDevice
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
 def test_grid_cluster_3d(dtype: torch.dtype, device: torch.device) -> None:
+    skip_unsupported_dtype(dtype, device)
     pos = torch.tensor(
         [[0.0, 0.0, 0.0], [0.1, 0.1, 0.1], [1.0, 1.0, 1.0]],
         dtype=dtype,
@@ -41,12 +47,13 @@ def test_grid_cluster_3d(dtype: torch.dtype, device: torch.device) -> None:
     assert out[0] != out[2]
 
 
-@withCUDA
+@withDevice
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
 def test_grid_cluster_with_start_end(
     dtype: torch.dtype,
     device: torch.device,
 ) -> None:
+    skip_unsupported_dtype(dtype, device)
     pos = torch.tensor(
         [[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]],
         dtype=dtype,
@@ -62,7 +69,7 @@ def test_grid_cluster_with_start_end(
     assert out.dtype == torch.long
 
 
-@withCUDA
+@withDevice
 def test_grid_cluster_defaults_match_explicit(device: torch.device) -> None:
     pos = torch.tensor([[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]], device=device)
     size = torch.tensor([0.5, 0.5], device=device)
@@ -78,7 +85,7 @@ def test_grid_cluster_defaults_match_explicit(device: torch.device) -> None:
     assert torch.equal(out_default, out_explicit)
 
 
-@withCUDA
+@withDevice
 def test_grid_cluster_cpu_cuda_parity(device: torch.device) -> None:
     pos = torch.tensor([[0.0, 0.0], [0.5, 0.5], [1.0, 1.0]])
     size = torch.tensor([0.5, 0.5])
