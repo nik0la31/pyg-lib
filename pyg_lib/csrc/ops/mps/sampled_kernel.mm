@@ -73,7 +73,7 @@ at::Tensor sampled_op_mps(const at::Tensor& left,
         [encoder setComputePipelineState:pipeline];
         at::native::mps::mtl_setArgs<0>(
             encoder, left, right, out, left_index, right_index, fn_type,
-            left_index.has_value(), right_index.has_value(), num_feats, numel);
+            left_index.has_value(), right_index.has_value(), num_feats);
         at::native::mps::mtl_dispatch1DJob(
             encoder, pipeline, static_cast<NSUInteger>(numel));
       }

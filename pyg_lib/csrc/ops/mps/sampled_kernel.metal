@@ -12,23 +12,22 @@ using namespace metal;
 	constant bool& has_left_index [[buffer(6)]], \
 	constant bool& has_right_index [[buffer(7)]], \
 	constant long& num_feats [[buffer(8)]], \
-	constant long& numel [[buffer(9)]], \
-	uint tid [[thread_position_in_grid]]
+	uint thread_idx [[thread_position_in_grid]]
 
 template <typename T>
 kernel void sampled_op_kernel(SAMPLED_OP_ARGUMENTS(T)) {
 
-    long i = tid / num_feats;
+    long i = thread_idx / num_feats;
     if (has_left_index) {
         i = left_index[i];
     }
 
-    long j = tid / num_feats;
+    long j = thread_idx / num_feats;
     if (has_right_index) {
         j = right_index[j];
     }
 
-    long k = tid % num_feats;
+    long k = thread_idx % num_feats;
 
     T a = left[i * num_feats + k];
     T b = right[j * num_feats + k];
@@ -45,8 +44,7 @@ kernel void sampled_op_kernel(SAMPLED_OP_ARGUMENTS(T)) {
         c = a / b;
     }
 
-    out[tid] = c;
-
+    out[thread_idx] = c;
 }
 
 #define INSTANTIATE_SAMPLED_OP(T, NAME) \
