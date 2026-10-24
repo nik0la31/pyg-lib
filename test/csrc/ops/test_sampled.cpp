@@ -72,6 +72,8 @@ INSTANTIATE_TEST_SUITE_P(OpsTest,
                          MultipleDeviceTest,
 #ifdef WITH_CUDA
                          testing::Values(at::kCPU, at::kCUDA));
+#elif defined(WITH_METAL)
+                         testing::Values(at::kCPU, at::kMPS));
 #else
                          testing::Values(at::kCPU));
 #endif
