@@ -40,7 +40,7 @@ at::Tensor nearest(const at::Tensor& x,
         auto& lib = getMPSLibrary();
         const auto pipeline = lib.getPipelineStateForFunc("nearest_op_" + tname);
 
-        at::mps::dispatch_sync_with_rethrow(stream->commandQueue(), ^() {
+        at::mps::dispatch_sync_with_rethrow(stream->queue(), ^() {
             @autoreleasepool {
                 auto encoder = stream->commandEncoder();
                 [encoder setComputePipelineState:pipeline];
