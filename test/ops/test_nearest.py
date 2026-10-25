@@ -2,12 +2,14 @@ import pytest
 import torch
 
 import pyg_lib
-from pyg_lib.testing import withCUDA
+from pyg_lib.testing import withDevice
+from test_utils import skip_unsupported_dtype
 
 
-@withCUDA
+@withDevice
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
 def test_nearest_basic(dtype: torch.dtype, device: torch.device) -> None:
+    skip_unsupported_dtype(dtype, device)
     x = torch.tensor([[0.0, 0.0], [3.0, 0.0]], dtype=dtype, device=device)
     y = torch.tensor([[1.0, 0.0], [2.0, 0.0]], dtype=dtype, device=device)
 
@@ -17,9 +19,10 @@ def test_nearest_basic(dtype: torch.dtype, device: torch.device) -> None:
     assert out[1].item() == 1  # x[1]=(3,0) nearest to y[1]=(2,0)
 
 
-@withCUDA
+@withDevice
 @pytest.mark.parametrize('dtype', [torch.float, torch.double])
 def test_nearest_correctness(dtype: torch.dtype, device: torch.device) -> None:
+    skip_unsupported_dtype(dtype, device)
     x = torch.randn(20, 5, dtype=dtype, device=device)
     y = torch.randn(15, 5, dtype=dtype, device=device)
 
@@ -31,7 +34,7 @@ def test_nearest_correctness(dtype: torch.dtype, device: torch.device) -> None:
     assert torch.equal(out, expected.to(out.device))
 
 
-@withCUDA
+@withDevice
 def test_nearest_batched(device: torch.device) -> None:
     x = torch.randn(20, 3, device=device)
     y = torch.randn(15, 3, device=device)

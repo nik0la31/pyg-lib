@@ -3,11 +3,7 @@ import torch
 
 import pyg_lib
 from pyg_lib.testing import withDevice
-
-def skip_unsupported_dtype(dtype: torch.dtype, device: torch.device) -> None:
-    if device.type == 'mps' and dtype == torch.double:
-        pytest.skip('MPS does not support float64')
-
+from test_utils import skip_unsupported_dtype
 
 @withDevice
 @pytest.mark.parametrize('dtype', [torch.float, torch.double, torch.bfloat16])
